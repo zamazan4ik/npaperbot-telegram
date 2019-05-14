@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     app.add_option("--max-results-count", MaxResultCount, "Maximum results count per request");
 
     int MaxMessageLength = 2500;
-    app.add_flag("--max-message-length", MaxMessageLength, "Maximum result message length");
+    app.add_option("--max-message-length", MaxMessageLength, "Maximum result message length");
 
     CLI11_PARSE(app, argc, argv);
 
