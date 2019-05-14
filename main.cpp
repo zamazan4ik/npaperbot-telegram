@@ -59,8 +59,10 @@ int main(int argc, char* argv[])
 
             const static std::string ResultFiller = "For the request \"" +  fixedMessage + "\":\n";
             const long long MaxResultLength = 2500; // Some maximum length - otherwise tgbot-cpp crashes
+            const int MaxResultCount = 20; // Should be configurable from outside
             std::string result = ResultFiller;
             bool anyResult = false;
+            int resultCount = 0;
 
             std::lock_guard<std::mutex> lockGuard(papersDatabase);
             for(auto const& paper : papers)
@@ -74,7 +76,14 @@ int main(int argc, char* argv[])
                 const auto paperTitle = paper["title"].get<std::string>();
                 if(paperTitle.find(fixedMessage) != std::string::npos)
                 {
+                    if(resultCount == MaxResultCount)
+                    {
+                        result += "There are more papers. Please use more precise query.";
+                        break;
+                    }
+
                     anyResult = true;
+                    ++resultCount;
                     result += paper["title"].get<std::string>() + " from " +
                               paper["author"].get<std::string>() + "\n" + paper["link"].get<std::string>() + "\n\n";
 
