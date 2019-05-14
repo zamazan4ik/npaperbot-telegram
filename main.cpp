@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
             }
         });
 
-    bot.getEvents().onCommand("help", [&bot, &papers](TgBot::Message::Ptr message)
+    bot.getEvents().onCommand("help", [&bot](TgBot::Message::Ptr message)
     {
         bot.getApi().sendMessage(message->chat->id, "Use \"/paper\" command with substring from a proposal title."
                                                     "Search works only for titles. Fuzzy search isn't supported yet.");
