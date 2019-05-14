@@ -1,4 +1,5 @@
 # npaperbot-telegram
+Search C++ proposals in Telegram.
 
 ### Dependencies
 * C++ compiler with C++17 support
