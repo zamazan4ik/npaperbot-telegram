@@ -49,6 +49,9 @@ int main(int argc, char* argv[])
 
             fixedMessage.erase(fixedMessage.begin(), fixedMessage.begin() + fixedMessage.find(' ') + 1);
 
+            std::string result = "For the request \"" +  fixedMessage + "\":\n";
+            bool anyResult = false;
+
             std::lock_guard<std::mutex> lockGuard(papersDatabase);
             for(auto const& paper : papers)
             {
@@ -61,10 +64,18 @@ int main(int argc, char* argv[])
                 const auto paperTitle = paper["title"].get<std::string>();
                 if(paperTitle.find(fixedMessage) != std::string::npos)
                 {
-                    bot.getApi().sendMessage(message->chat->id, paper["title"].get<std::string>() + " from " +
-                            paper["author"].get<std::string>() + "\n" + paper["link"].get<std::string>());
+                    anyResult = true;
+                    result += paper["title"].get<std::string>() + " from " +
+                              paper["author"].get<std::string>() + "\n" + paper["link"].get<std::string>() + "\n\n";
                 }
             }
+
+            if(!anyResult)
+            {
+               result +=  "Found nothing. Sorry.";
+            }
+
+            bot.getApi().sendMessage(message->chat->id, result);
         });
 
     bot.getEvents().onCommand("help", [&bot, &papers](TgBot::Message::Ptr message)
