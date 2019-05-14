@@ -3,8 +3,13 @@
 
 #include "nlohmann/json.hpp"
 
+#include <chrono>
 #include <iostream>
+#include <mutex>
 #include <string>
+#include <thread>
+
+std::mutex papersDatabase;
 
 void updatePapersDatabase(nlohmann::json& papers)
 {
@@ -15,6 +20,8 @@ void updatePapersDatabase(nlohmann::json& papers)
     const TgBot::Url uri(dbAddress);
 
     const std::string result = httpClient.makeRequest(uri, args);
+
+    std::lock_guard<std::mutex> lockGuard(papersDatabase);
     papers = nlohmann::json::parse(result);
 }
 
@@ -22,6 +29,19 @@ int main(int argc, char* argv[])
 {
     nlohmann::json papers;
     updatePapersDatabase(papers);
+
+    std::thread updatePapersThread([&papers]()
+        {
+            while(true)
+            {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(std::chrono::duration(10min));
+
+                updatePapersDatabase(papers);
+            }
+        });
+    updatePapersThread.detach();
+
     TgBot::Bot bot(argv[1]);
     bot.getEvents().onCommand("paper", [&bot, &papers](TgBot::Message::Ptr message)
         {
@@ -29,6 +49,7 @@ int main(int argc, char* argv[])
 
             fixedMessage.erase(fixedMessage.begin(), fixedMessage.begin() + fixedMessage.find(' ') + 1);
 
+            std::lock_guard<std::mutex> lockGuard(papersDatabase);
             for(auto const& paper : papers)
             {
                 if(paper.find("type") == paper.end() || paper.find("title") == paper.end() ||
