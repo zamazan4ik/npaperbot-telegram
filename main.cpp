@@ -49,7 +49,9 @@ int main(int argc, char* argv[])
 
             fixedMessage.erase(fixedMessage.begin(), fixedMessage.begin() + fixedMessage.find(' ') + 1);
 
-            std::string result = "For the request \"" +  fixedMessage + "\":\n";
+            const static std::string ResultFiller = "For the request \"" +  fixedMessage + "\":\n";
+            const long long MaxResultLength = 2500; // Some maximum length - otherwise tgbot-cpp crashes
+            std::string result = ResultFiller;
             bool anyResult = false;
 
             std::lock_guard<std::mutex> lockGuard(papersDatabase);
@@ -67,6 +69,12 @@ int main(int argc, char* argv[])
                     anyResult = true;
                     result += paper["title"].get<std::string>() + " from " +
                               paper["author"].get<std::string>() + "\n" + paper["link"].get<std::string>() + "\n\n";
+
+                    if(result.size() > MaxResultLength)
+                    {
+                        bot.getApi().sendMessage(message->chat->id, result);
+                        result = ResultFiller;
+                    }
                 }
             }
 
@@ -75,7 +83,10 @@ int main(int argc, char* argv[])
                result +=  "Found nothing. Sorry.";
             }
 
-            bot.getApi().sendMessage(message->chat->id, result);
+            if(result != ResultFiller)
+            {
+                bot.getApi().sendMessage(message->chat->id, result);
+            }
         });
 
     bot.getEvents().onCommand("help", [&bot, &papers](TgBot::Message::Ptr message)
