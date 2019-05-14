@@ -3,5 +3,4 @@ cmake
 
 [requires]
 jsonformoderncpp/3.6.1@vthiery/stable
-spdlog/1.3.1@bincrafters/stable
 tgbot-cpp/1.1@zamazan4ik/testing
