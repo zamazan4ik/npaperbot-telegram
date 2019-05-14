@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 
             fixedMessage.erase(fixedMessage.begin(), fixedMessage.begin() + fixedMessage.find(' ') + 1);
 
-            const static std::string ResultFiller = "For the request \"" +  fixedMessage + "\":\n";
+            const std::string ResultFiller = "For the request \"" +  fixedMessage + "\":\n";
             const long long MaxResultLength = 2500; // Some maximum length - otherwise tgbot-cpp crashes
             const int MaxResultCount = 20; // Should be configurable from outside
             std::string result = ResultFiller;
