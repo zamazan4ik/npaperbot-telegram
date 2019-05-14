@@ -1,9 +1,11 @@
-#include "CLI/CLI.hpp"
+#include <CLI/CLI.hpp>
 
-#include "tgbot/net/CurlHttpClient.h"
-#include "tgbot/tgbot.h"
+#include <tgbot/net/CurlHttpClient.h>
+#include <tgbot/tgbot.h>
 
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
+
+#include <boost/algorithm/string.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -80,8 +82,9 @@ int main(int argc, char* argv[])
                 {
                     continue;
                 }
+
                 const auto paperTitle = paper["title"].get<std::string>();
-                if(paperTitle.find(fixedMessage) != std::string::npos)
+                if(boost::algorithm::icontains(paperTitle, fixedMessage))
                 {
                     if(resultCount == MaxResultCount)
                     {

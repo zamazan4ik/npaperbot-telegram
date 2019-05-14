@@ -2,6 +2,7 @@
 cmake
 
 [requires]
+boost/1.70.0@conan/stable
 cli11/1.6.1@bincrafters/stable
 jsonformoderncpp/3.6.1@vthiery/stable
 tgbot-cpp/1.1@zamazan4ik/testing
