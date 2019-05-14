@@ -4,6 +4,7 @@
 #include "nlohmann/json.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -27,6 +28,13 @@ void updatePapersDatabase(nlohmann::json& papers)
 
 int main(int argc, char* argv[])
 {
+    // Check command line parameters
+    if(argc < 2)
+    {
+        std::cerr << "Cannot find Telegram Bot token.";
+        std::exit(EXIT_FAILURE);
+    }
+
     nlohmann::json papers;
     updatePapersDatabase(papers);
 
