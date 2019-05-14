@@ -1,3 +1,5 @@
+#include "CLI/CLI.hpp"
+
 #include "tgbot/net/CurlHttpClient.h"
 #include "tgbot/tgbot.h"
 
@@ -9,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 std::mutex papersDatabase;
 
@@ -28,12 +31,18 @@ void updatePapersDatabase(nlohmann::json& papers)
 
 int main(int argc, char* argv[])
 {
-    // Check command line parameters
-    if(argc < 2)
-    {
-        std::cerr << "Cannot find Telegram Bot token.";
-        std::exit(EXIT_FAILURE);
-    }
+    CLI::App app("nPaperBot Telegram");
+
+    std::string token;
+    app.add_option("--token", token, "Telegram Bot API token")->required();
+
+    int MaxResultCount = 20;
+    app.add_option("--max-results-count", MaxResultCount, "Maximum results count per request");
+
+    int MaxMessageLength = 2500;
+    app.add_flag("--max-message-length", MaxMessageLength, "Maximum result message length");
+
+    CLI11_PARSE(app, argc, argv);
 
     nlohmann::json papers;
     updatePapersDatabase(papers);
@@ -50,16 +59,14 @@ int main(int argc, char* argv[])
         });
     updatePapersThread.detach();
 
-    TgBot::Bot bot(argv[1]);
-    bot.getEvents().onCommand("paper", [&bot, &papers](TgBot::Message::Ptr message)
+    TgBot::Bot bot(token);
+    bot.getEvents().onCommand("paper", [&bot, &papers, MaxResultCount, MaxMessageLength](TgBot::Message::Ptr message)
         {
             std::string fixedMessage = message->text.substr();
 
             fixedMessage.erase(fixedMessage.begin(), fixedMessage.begin() + fixedMessage.find(' ') + 1);
 
             const std::string ResultFiller = "For the request \"" +  fixedMessage + "\":\n";
-            const long long MaxResultLength = 2500; // Some maximum length - otherwise tgbot-cpp crashes
-            const int MaxResultCount = 20; // Should be configurable from outside
             std::string result = ResultFiller;
             bool anyResult = false;
             int resultCount = 0;
@@ -87,7 +94,7 @@ int main(int argc, char* argv[])
                     result += paper["title"].get<std::string>() + " from " +
                               paper["author"].get<std::string>() + "\n" + paper["link"].get<std::string>() + "\n\n";
 
-                    if(result.size() > MaxResultLength)
+                    if(result.size() > MaxMessageLength)
                     {
                         bot.getApi().sendMessage(message->chat->id, result);
                         result = ResultFiller;
