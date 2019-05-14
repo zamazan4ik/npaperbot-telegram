@@ -83,8 +83,11 @@ int main(int argc, char* argv[])
                     continue;
                 }
 
+                // Search by title and author
                 const auto paperTitle = paper["title"].get<std::string>();
-                if(boost::algorithm::icontains(paperTitle, fixedMessage))
+                const auto paperAuthor = paper["author"].get<std::string>();
+                if(boost::algorithm::icontains(paperTitle, fixedMessage) ||
+                   boost::algorithm::icontains(paperAuthor, fixedMessage))
                 {
                     if(resultCount == MaxResultCount)
                     {
