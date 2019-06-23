@@ -3,6 +3,8 @@
 #include <tgbot/net/CurlHttpClient.h>
 #include <tgbot/tgbot.h>
 
+#include <spdlog/sinks/daily_file_sink.h>
+
 #include <nlohmann/json.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -48,24 +50,31 @@ int main(int argc, char* argv[])
 
     CLI11_PARSE(app, argc, argv);
 
+    auto daily_logger = spdlog::daily_logger_mt("daily_logger", "logs/log.txt", 0, 0);
+    daily_logger->flush_on(spdlog::level::info);
+
     nlohmann::json papers;
     updatePapersDatabase(papers, PapersDatabaseAddress);
 
-    std::thread updatePapersThread([&papers, &PapersDatabaseAddress]()
+    std::thread updatePapersThread([&papers, &PapersDatabaseAddress, daily_logger]()
         {
             while(true)
             {
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(std::chrono::duration(10min));
 
+                daily_logger->info("Update database started");
                 updatePapersDatabase(papers, PapersDatabaseAddress);
+                daily_logger->info("Update database finished");
             }
         });
     updatePapersThread.detach();
 
     TgBot::Bot bot(token);
-    bot.getEvents().onCommand("paper", [&bot, &papers, MaxResultCount, MaxMessageLength](TgBot::Message::Ptr message)
+    bot.getEvents().onCommand("paper", [&bot, &papers, MaxResultCount, MaxMessageLength, daily_logger](TgBot::Message::Ptr message)
         {
+            daily_logger->info("Paper command requested with following text: " + message->text);
+
             std::string fixedMessage = message->text.substr();
 
             // Filter out from request command name
@@ -100,6 +109,7 @@ int main(int argc, char* argv[])
                 {
                     if(resultCount == MaxResultCount)
                     {
+                        daily_logger->info("Reached maximum result count");
                         result += "There are more papers. Please use more precise query.";
                         break;
                     }
@@ -111,6 +121,7 @@ int main(int argc, char* argv[])
 
                     if(result.size() > MaxMessageLength)
                     {
+                        daily_logger->info("Reached maximum message length");
                         bot.getApi().sendMessage(message->chat->id, result);
                         result = ResultFiller;
                     }
@@ -120,20 +131,25 @@ int main(int argc, char* argv[])
             // If we found nothing
             if(!anyResult)
             {
-               result +=  "Found nothing. Sorry.";
+                daily_logger->info("No result");
+                result +=  "Found nothing. Sorry.";
             }
 
             // If we found something - return the result
             if(result != ResultFiller)
             {
+                daily_logger->info("Successful response");
                 bot.getApi().sendMessage(message->chat->id, result);
             }
         });
 
-    bot.getEvents().onCommand("help", [&bot](TgBot::Message::Ptr message)
+    bot.getEvents().onCommand("help", [&bot, daily_logger](TgBot::Message::Ptr message)
     {
+        daily_logger->info("Help command requested");
+
         bot.getApi().sendMessage(message->chat->id, "Use \"/paper\" command with substring from a proposal title."
-                                                    "Search works only for titles and authors. Search works as finding a substring in a string."
+                                                    "Search works only for paper name, titles and authors. "
+                                                    "Search works as finding a substring in a string."
                                                     "Fuzzy search isn't supported yet.");
     });
 
