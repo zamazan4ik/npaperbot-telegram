@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
         {
             std::string fixedMessage = message->text.substr();
 
+            // Filter out from request command name
             fixedMessage.erase(fixedMessage.begin(), fixedMessage.begin() + fixedMessage.find(' ') + 1);
 
             const std::string ResultFiller = "For the request \"" +  fixedMessage + "\":\n";
@@ -91,6 +92,8 @@ int main(int argc, char* argv[])
                 const auto paperName = paperObject.key();
                 const auto paperTitle = paper["title"].get<std::string>();
                 const auto paperAuthor = paper["author"].get<std::string>();
+
+                // Do case-insensitive search
                 if(boost::algorithm::icontains(paperName, fixedMessage) ||
                    boost::algorithm::icontains(paperTitle, fixedMessage) ||
                    boost::algorithm::icontains(paperAuthor, fixedMessage))
@@ -103,7 +106,7 @@ int main(int argc, char* argv[])
 
                     anyResult = true;
                     ++resultCount;
-                    result += paper["title"].get<std::string>() + " from " +
+                    result += paperName + ": " + paper["title"].get<std::string>() + " from " +
                               paper["author"].get<std::string>() + "\n" + paper["link"].get<std::string>() + "\n\n";
 
                     if(result.size() > MaxMessageLength)
@@ -114,11 +117,13 @@ int main(int argc, char* argv[])
                 }
             }
 
+            // If we found nothing
             if(!anyResult)
             {
                result +=  "Found nothing. Sorry.";
             }
 
+            // If we found something - return the result
             if(result != ResultFiller)
             {
                 bot.getApi().sendMessage(message->chat->id, result);
