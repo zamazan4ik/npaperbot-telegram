@@ -124,7 +124,8 @@ int main(int argc, char* argv[])
     bot.getEvents().onCommand("help", [&bot](TgBot::Message::Ptr message)
     {
         bot.getApi().sendMessage(message->chat->id, "Use \"/paper\" command with substring from a proposal title."
-                                                    "Search works only for titles. Fuzzy search isn't supported yet.");
+                                                    "Search works only for titles and authors. Search works as finding a substring in a string."
+                                                    "Fuzzy search isn't supported yet.");
     });
 
     try
