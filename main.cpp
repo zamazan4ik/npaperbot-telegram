@@ -76,8 +76,10 @@ int main(int argc, char* argv[])
             int resultCount = 0;
 
             std::lock_guard<std::mutex> lockGuard(papersDatabase);
-            for(auto const& paper : papers)
+            for(auto const& paperObject : papers.items())
             {
+                const auto paper = paperObject.value();
+                // If we cannot find any supported field - just skip this paper
                 if(paper.find("type") == paper.end() || paper.find("title") == paper.end() ||
                     paper.find("author") == paper.end() || paper.find("link") == paper.end() ||
                     paper["type"].get<std::string>() != "paper")
@@ -85,10 +87,12 @@ int main(int argc, char* argv[])
                     continue;
                 }
 
-                // Search by title and author
+                // Search by paper name, title and author
+                const auto paperName = paperObject.key();
                 const auto paperTitle = paper["title"].get<std::string>();
                 const auto paperAuthor = paper["author"].get<std::string>();
-                if(boost::algorithm::icontains(paperTitle, fixedMessage) ||
+                if(boost::algorithm::icontains(paperName, fixedMessage) ||
+                   boost::algorithm::icontains(paperTitle, fixedMessage) ||
                    boost::algorithm::icontains(paperAuthor, fixedMessage))
                 {
                     if(resultCount == MaxResultCount)
