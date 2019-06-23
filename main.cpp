@@ -17,13 +17,12 @@
 
 std::mutex papersDatabase;
 
-void updatePapersDatabase(nlohmann::json& papers)
+void updatePapersDatabase(nlohmann::json& papers, const std::string& papersDatabaseAddress)
 {
     std::vector<TgBot::HttpReqArg> args;
     TgBot::CurlHttpClient httpClient;
 
-    static const std::string dbAddress = "https://raw.githubusercontent.com/wg21link/db/master/index.json";
-    const TgBot::Url uri(dbAddress);
+    const TgBot::Url uri(papersDatabaseAddress);
 
     const std::string result = httpClient.makeRequest(uri, args);
 
@@ -44,19 +43,22 @@ int main(int argc, char* argv[])
     int MaxMessageLength = 2500;
     app.add_option("--max-message-length", MaxMessageLength, "Maximum result message length");
 
+    std::string PapersDatabaseAddress = "https://raw.githubusercontent.com/wg21link/db/master/index.json";
+    app.add_option("--database-address", PapersDatabaseAddress, "Online database address with papers");
+
     CLI11_PARSE(app, argc, argv);
 
     nlohmann::json papers;
-    updatePapersDatabase(papers);
+    updatePapersDatabase(papers, PapersDatabaseAddress);
 
-    std::thread updatePapersThread([&papers]()
+    std::thread updatePapersThread([&papers, &PapersDatabaseAddress]()
         {
             while(true)
             {
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(std::chrono::duration(10min));
 
-                updatePapersDatabase(papers);
+                updatePapersDatabase(papers, PapersDatabaseAddress);
             }
         });
     updatePapersThread.detach();
