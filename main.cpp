@@ -48,9 +48,12 @@ int main(int argc, char* argv[])
     std::string PapersDatabaseAddress = "https://raw.githubusercontent.com/wg21link/db/master/index.json";
     app.add_option("--database-address", PapersDatabaseAddress, "Online database address with papers");
 
+    std::string LogsPath = "logs/log.txt";
+    app.add_option("--log-path", LogsPath, "Path to log folder");
+
     CLI11_PARSE(app, argc, argv);
 
-    auto daily_logger = spdlog::daily_logger_mt("daily_logger", "logs/log.txt", 0, 0);
+    auto daily_logger = spdlog::daily_logger_mt("daily_logger", LogsPath, 0, 0);
     daily_logger->flush_on(spdlog::level::info);
 
     nlohmann::json papers;
