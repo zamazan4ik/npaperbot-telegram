@@ -10,7 +10,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include <chrono>
-#include <cstdlib>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -73,7 +72,9 @@ int main(int argc, char* argv[])
         });
     updatePapersThread.detach();
 
-    TgBot::Bot bot(token);
+    TgBot::CurlHttpClient httpClient;
+
+    TgBot::Bot bot(token, httpClient);
     bot.getEvents().onCommand("paper", [&bot, &papers, MaxResultCount, MaxMessageLength, daily_logger](TgBot::Message::Ptr message)
         {
             daily_logger->info("Paper command requested with following text: " + message->text);
