@@ -22,5 +22,7 @@ RUN CC=clang CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release && \
     make install && \
     rm -rf /usr/src/npaperbot-telegram
 
+WORKDIR /usr/local/bin
+
 ENTRYPOINT ["/usr/local/bin/npaperbot_telegram"]
 
