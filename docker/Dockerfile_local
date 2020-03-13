@@ -9,9 +9,8 @@ WORKDIR /usr/src/npaperbot-telegram
 COPY main.cpp ./
 COPY CMakeLists.txt ./
 
-RUN CC=clang CXX=clang++ cmake . -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc) && \
-    make install && \
+RUN CC=clang CXX=clang++ cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --target install && \
     rm -rf /usr/src/npaperbot-telegram
 
 WORKDIR /usr/local/bin

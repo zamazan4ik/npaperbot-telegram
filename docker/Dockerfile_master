@@ -13,13 +13,8 @@ RUN git clone ${NPAPERBOT_SOURCE_URL}
 
 WORKDIR npaperbot-telegram
 
-RUN mkdir build
-
-WORKDIR build
-
-RUN CC=clang CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make && \
-    make install && \
+RUN CC=clang CXX=clang++ cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --target install && \
     rm -rf /usr/src/npaperbot-telegram
 
 WORKDIR /usr/local/bin

@@ -15,13 +15,8 @@ RUN wget ${NPAPERBOT_SOURCE_URL} && unzip v${NPAPERBOT_VERSION}.zip
 
 WORKDIR npaperbot-telegram-${NPAPERBOT_VERSION}
 
-RUN mkdir build
-
-WORKDIR build
-
-RUN CC=clang CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make && \
-    make install && \
+RUN CC=clang CXX=clang++ cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build --target install && \
     rm -rf /usr/src/npaperbot-telegram
 
 WORKDIR /usr/local/bin
