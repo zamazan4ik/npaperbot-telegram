@@ -3,6 +3,7 @@
 #include <tgbot/net/CurlHttpClient.h>
 #include <tgbot/tgbot.h>
 
+#include <spdlog/logger.h>
 #include <spdlog/sinks/daily_file_sink.h>
 
 #include <nlohmann/json.hpp>
@@ -63,7 +64,7 @@ int main(int argc, char* argv[])
             while(true)
             {
                 using namespace std::chrono_literals;
-                std::this_thread::sleep_for(std::chrono::duration(10min));
+                std::this_thread::sleep_for(std::chrono::duration(60min));
 
                 daily_logger->info("Update database started");
                 updatePapersDatabase(papers, PapersDatabaseAddress);
@@ -160,7 +161,7 @@ int main(int argc, char* argv[])
     try
     {
         std::cout << "Bot username: " << bot.getApi().getMe()->username << std::endl;
-        TgBot::TgLongPoll longPoll(bot);
+        TgBot::TgLongPoll longPoll(bot, 100, 10);
         while (true)
         {
             std::cout << "Long poll started\n";
