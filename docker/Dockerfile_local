@@ -9,7 +9,7 @@ WORKDIR /usr/src/npaperbot-telegram
 COPY main.cpp ./
 COPY CMakeLists.txt ./
 
-RUN cmake . -DCMAKE_BUILD_TYPE=Release && \
+RUN CC=clang CXX=clang++ cmake . -DCMAKE_BUILD_TYPE=Release && \
     make -j$(nproc) && \
     make install && \
     rm -rf /usr/src/npaperbot-telegram
