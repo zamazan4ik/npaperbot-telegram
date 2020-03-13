@@ -1,0 +1,26 @@
+FROM fedora:latest
+
+LABEL maintainer="Alexander Zaitsev <zamazan4ik@tut.by>"
+
+ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
+
+RUN dnf install -y perl autoconf automake libtool clang cmake make git python3-pip \
+    && pip install conan
+
+WORKDIR /usr/src/npaperbot-telegram
+
+RUN git clone ${NPAPERBOT_SOURCE_URL}
+
+WORKDIR npaperbot-telegram
+
+RUN mkdir build
+
+WORKDIR build
+
+RUN CC=clang CXX=clang++ cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make && \
+    make install && \
+    rm -rf /usr/src/npaperbot-telegram
+
+ENTRYPOINT ["/usr/local/bin/npaperbot_telegram"]
+

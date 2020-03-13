@@ -1,0 +1,18 @@
+FROM fedora:latest
+
+LABEL maintainer="Alexander Zaitsev <zamazan4ik@tut.by>"
+
+RUN dnf install -y perl autoconf automake libtool clang cmake make python3-pip \
+    && pip install conan
+
+WORKDIR /usr/src/npaperbot-telegram
+COPY main.cpp ./
+COPY CMakeLists.txt ./
+
+RUN cmake . -DCMAKE_BUILD_TYPE=Release && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /usr/src/npaperbot-telegram
+
+ENTRYPOINT ["/usr/local/bin/npaperbot_telegram"]
+
