@@ -28,5 +28,5 @@ conan_cmake_run(REQUIRES
 add_executable(npaperbot_telegram main.cpp)
 target_link_libraries(npaperbot_telegram ${CONAN_LIBS})
 
-install (TARGETS npaperbot_telegram RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+install(TARGETS npaperbot_telegram RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_PREFIX}/bin/logs")
