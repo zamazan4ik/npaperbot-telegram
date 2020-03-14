@@ -2,7 +2,7 @@ FROM fedora:latest
 
 LABEL maintainer="Alexander Zaitsev <zamazan4ik@tut.by>"
 
-RUN dnf install -y perl autoconf automake libtool clang cmake make python3-pip \
+RUN dnf install -y ca-certificates perl autoconf automake libtool clang cmake make python3-pip \
     && pip install conan
 
 WORKDIR /usr/src/npaperbot-telegram

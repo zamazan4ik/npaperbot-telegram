@@ -13,16 +13,17 @@
 #include <chrono>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
 
 std::mutex papersDatabase;
 
-void updatePapersDatabase(nlohmann::json& papers, const std::string& papersDatabaseAddress)
+void updatePapersDatabase(TgBot::HttpClient const& httpClient, nlohmann::json& papers,
+    const std::string& papersDatabaseAddress)
 {
     std::vector<TgBot::HttpReqArg> args;
-    TgBot::CurlHttpClient httpClient;
 
     const TgBot::Url uri(papersDatabaseAddress);
 
@@ -51,15 +52,25 @@ int main(int argc, char* argv[])
     std::string LogsPath = "logs/log.txt";
     app.add_option("--log-path", LogsPath, "Path to log folder");
 
+    std::optional<std::string> CertificatePath;
+    app.add_option("--ca-info", CertificatePath, "Path to a certificate");
+
     CLI11_PARSE(app, argc, argv);
+
+    TgBot::CurlHttpClient httpClient;
+    // Curl configuration
+    if(CertificatePath.has_value())
+    {
+        curl_easy_setopt(httpClient.curlSettings, CURLOPT_CAINFO, CertificatePath.value().c_str());
+    }
 
     auto daily_logger = spdlog::daily_logger_mt("daily_logger", LogsPath, 0, 0);
     daily_logger->flush_on(spdlog::level::info);
 
     nlohmann::json papers;
-    updatePapersDatabase(papers, PapersDatabaseAddress);
+    updatePapersDatabase(httpClient, papers, PapersDatabaseAddress);
 
-    std::thread updatePapersThread([&papers, &PapersDatabaseAddress, daily_logger]()
+    std::thread updatePapersThread([&httpClient, &papers, &PapersDatabaseAddress, daily_logger]()
         {
             while(true)
             {
@@ -67,13 +78,11 @@ int main(int argc, char* argv[])
                 std::this_thread::sleep_for(std::chrono::duration(60min));
 
                 daily_logger->info("Update database started");
-                updatePapersDatabase(papers, PapersDatabaseAddress);
+                updatePapersDatabase(httpClient, papers, PapersDatabaseAddress);
                 daily_logger->info("Update database finished");
             }
         });
     updatePapersThread.detach();
-
-    TgBot::CurlHttpClient httpClient;
 
     TgBot::Bot bot(token, httpClient);
     bot.getEvents().onCommand("paper", [&bot, &papers, MaxResultCount, MaxMessageLength, daily_logger](TgBot::Message::Ptr message)

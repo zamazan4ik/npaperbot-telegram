@@ -13,6 +13,7 @@ Search C++ proposals in Telegram.
 
 ### How to run
 You must provide Telegram Bot API token to the `npaperbot-telegram` with `--token` option. `npaperbot-telegram` has other command line options but only `--token` is mandatory - other options have some reasonable defaults.
+Since `libcurl` can be built without bundled certificates you need to provide them explicitly via `--ca-info` bot option.
 
 So your command line for running `npaperbot-telegram` can be like this one:
 `npaperbot_telegram --token ${TOKEN} --log-path ${LOG_PATH}`

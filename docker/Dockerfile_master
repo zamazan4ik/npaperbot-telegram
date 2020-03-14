@@ -4,7 +4,7 @@ LABEL maintainer="Alexander Zaitsev <zamazan4ik@tut.by>"
 
 ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
 
-RUN dnf install -y perl autoconf automake libtool clang cmake make git python3-pip \
+RUN dnf install -y ca-certificates perl autoconf automake libtool clang cmake make git python3-pip \
     && pip install conan
 
 WORKDIR /usr/src/npaperbot-telegram
