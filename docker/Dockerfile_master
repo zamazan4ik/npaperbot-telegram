@@ -1,23 +1,11 @@
-FROM fedora:latest
-
-LABEL maintainer="Alexander Zaitsev <zamazan4ik@tut.by>"
-
-ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
-
-RUN dnf install -y ca-certificates perl autoconf automake libtool clang cmake make git python3-pip \
-    && pip install conan
-
+FROM rust:1.44 as builder
 WORKDIR /usr/src/npaperbot-telegram
-
+ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
 RUN git clone ${NPAPERBOT_SOURCE_URL}
-
 WORKDIR npaperbot-telegram
+RUN cargo install --path .
 
-RUN CC=clang CXX=clang++ cmake -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build --target install && \
-    rm -rf /usr/src/npaperbot-telegram
-
-WORKDIR /usr/local/bin
-
-ENTRYPOINT ["/usr/local/bin/npaperbot_telegram"]
-
+FROM debian:buster-slim
+RUN apt-get update && apt-get install -y openssl ca-certificates
+COPY --from=builder /usr/local/cargo/bin/npaperbot-telegram /usr/local/bin/npaperbot-telegram
+CMD ["npaperbot-telegram"]
