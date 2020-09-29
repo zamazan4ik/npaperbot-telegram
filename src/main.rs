@@ -122,6 +122,8 @@ async fn run() {
                         }
                     }
 
+                    result.sort_unstable();
+
                     if !result.is_empty() {
                         message
                             .reply_to(result.join("\n\n"))
