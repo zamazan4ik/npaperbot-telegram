@@ -1,3 +1,5 @@
+mod utils;
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_json;
@@ -76,8 +78,8 @@ async fn run() {
 
                                     let mut one_result = format!(
                                         "[{}]({})",
-                                        markdown_v2_escape(link_title.as_str()),
-                                        markdown_v2_escape_inline_uri(
+                                        utils::markdown_v2_escape(link_title.as_str()),
+                                        utils::markdown_v2_escape_inline_uri(
                                             value.get("link").unwrap().as_str().unwrap()
                                         )
                                     );
@@ -86,7 +88,7 @@ async fn run() {
                                         one_result.add_assign(
                                             format!(
                                                 r#" \(by {}\)"#,
-                                                markdown_v2_escape(x.as_str().unwrap())
+                                                utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
                                             .as_str(),
                                         );
@@ -96,7 +98,7 @@ async fn run() {
                                         one_result.add_assign(
                                             format!(
                                                 r#" \({}\)"#,
-                                                markdown_v2_escape(x.as_str().unwrap())
+                                                utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
                                             .as_str(),
                                         );
@@ -106,7 +108,7 @@ async fn run() {
                                         one_result.add_assign(
                                             format!(
                                                 r#" \(Related: [GitHub issue]({})\)"#,
-                                                markdown_v2_escape(x.as_str().unwrap())
+                                                utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
                                             .as_str(),
                                         );
@@ -194,36 +196,4 @@ fn find_search_request_in_message(text: &str) -> regex::CaptureMatches {
     }
 
     RE.captures_iter(text)
-}
-
-fn markdown_v2_escape(text: &str) -> String {
-    lazy_static! {
-        static ref TELEGRAM_ESCAPE_REGEX_ESCAPE: [&'static str; 11] =
-            ["{", "}", "[", "]", "(", ")", "+", "*", "|", ".", "-"];
-        static ref TELEGRAM_ESCAPE_REGEX_NOT_ESCAPE: [&'static str; 7] =
-            ["_", "~", "`", ">", "#", "=", "!"];
-        static ref RE: Regex = Regex::new(
-            format!(
-                r#"(?P<symbol>([\{}{}]))"#,
-                &TELEGRAM_ESCAPE_REGEX_ESCAPE.join(r#"\"#),
-                &TELEGRAM_ESCAPE_REGEX_NOT_ESCAPE.join("")
-            )
-            .as_str()
-        )
-        .unwrap();
-    }
-
-    RE.replace_all(text, r#"\$symbol"#).to_string()
-}
-
-fn markdown_v2_escape_inline_uri(text: &str) -> String {
-    lazy_static! {
-        static ref SYMBOLS_FOR_ESCAPING: [&'static str; 2] = [")", "\\"];
-        static ref RE: Regex = Regex::new(
-            format!(r#"(?P<symbol>([\{}]))"#, &SYMBOLS_FOR_ESCAPING.join(r#"\"#)).as_str()
-        )
-        .unwrap();
-    }
-
-    RE.replace_all(text, r#"\$symbol"#).to_string()
 }
