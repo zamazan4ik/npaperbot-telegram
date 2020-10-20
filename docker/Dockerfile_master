@@ -1,4 +1,4 @@
-FROM rust:1.44 as builder
+FROM rust:1.45.2-slim as builder
 WORKDIR /usr/src/npaperbot-telegram
 ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
 RUN git clone ${NPAPERBOT_SOURCE_URL}
