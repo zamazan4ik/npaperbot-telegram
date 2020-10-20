@@ -1,16 +1,19 @@
 mod utils;
 
+use teloxide::{prelude::*, utils::command::BotCommand};
+use tokio::runtime::Runtime;
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_json;
-use std::ops::AddAssign;
+
 use std::{
     collections::HashMap,
+    env,
     sync::{Arc, Mutex},
     thread,
 };
-use teloxide::{prelude::*, utils::command::BotCommand};
-use tokio::runtime::Runtime;
+use std::ops::AddAssign;
 
 #[derive(BotCommand)]
 #[command(rename = "lowercase", description = "These commands are supported:")]
@@ -34,8 +37,10 @@ async fn run() {
 
     let papers = Arc::new(Mutex::new(HashMap::<String, serde_json::Value>::new()));
 
+    let papers_database_uri = env::var("PAPERS_DATABASE_URI").expect("PAPERS_DATABASE_URI is not defined in environment variables");
+
     let update_papers = papers.clone();
-    let h = thread::spawn(move || update_database_thread(update_papers));
+    let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
 
     Dispatcher::new(bot)
         .messages_handler(|rx: DispatcherHandlerRx<Message>| {
@@ -164,11 +169,11 @@ async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> Respons
     Ok(())
 }
 
-fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>) {
+fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>, uri: String) {
     loop {
         let new_papers = Runtime::new()
             .unwrap()
-            .block_on(update_paper_database())
+            .block_on(update_paper_database(&uri))
             .unwrap();
 
         *papers.lock().unwrap() = new_papers;
@@ -181,8 +186,8 @@ fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>
     }
 }
 
-async fn update_paper_database() -> reqwest::Result<HashMap<String, serde_json::Value>> {
-    let resp = reqwest::get("https://raw.githubusercontent.com/wg21link/db/master/index.json")
+async fn update_paper_database(uri: &String) -> reqwest::Result<HashMap<String, serde_json::Value>> {
+    let resp = reqwest::get(uri)
         .await?
         .json::<HashMap<String, serde_json::Value>>()
         .await?;
