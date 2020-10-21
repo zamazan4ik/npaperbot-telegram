@@ -1,4 +1,5 @@
 mod utils;
+mod webhook;
 
 use teloxide::{prelude::*, utils::command::BotCommand};
 use tokio::runtime::Runtime;
@@ -37,10 +38,13 @@ async fn run() {
 
     let papers = Arc::new(Mutex::new(HashMap::<String, serde_json::Value>::new()));
 
-    let papers_database_uri = env::var("PAPERS_DATABASE_URI").expect("PAPERS_DATABASE_URI is not defined in environment variables");
+    let papers_database_uri = env::var("PAPERS_DATABASE_URI")
+        .expect("PAPERS_DATABASE_URI is not defined in environment variables");
 
     let update_papers = papers.clone();
     let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
+
+    let rx = webhook::webhook(bot.clone());
 
     Dispatcher::new(bot)
         .messages_handler(|rx: DispatcherHandlerRx<Message>| {
@@ -143,7 +147,8 @@ async fn run() {
                 }
             })
         })
-        .dispatch()
+        .dispatch_with_listener(rx.await,
+                                LoggingErrorHandler::with_custom_text("An error from the update listener"))
         .await;
 
     h.join().unwrap();

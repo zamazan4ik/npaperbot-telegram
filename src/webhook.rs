@@ -1,0 +1,112 @@
+use teloxide::dispatching::update_listeners;
+use teloxide::prelude::*;
+
+use actix_web::{App, HttpServer, Responder, HttpResponse};
+use actix_web::web;
+
+use tokio::sync::mpsc;
+
+use std::convert::Infallible;
+use std::env;
+use std::io;
+
+async fn telegram_request(tx: web::Data<mpsc::UnboundedSender<Result<Update, String>>>, input: String) -> impl Responder {
+    let try_parse = match serde_json::from_str(&input) {
+        Ok(update) => Ok(update),
+        Err(error) => {
+            log::error!(
+                "Cannot parse an update.\nError: {:?}\nValue: {}\n\
+                       This is a bug in teloxide, please open an issue here: \
+                       https://github.com/teloxide/teloxide/issues.",
+                error,
+                input
+            );
+            Err(error)
+        }
+    };
+    if let Ok(update) = try_parse {
+        tx.send(Ok(update)).expect("Cannot send an incoming update from the webhook")
+    }
+
+    HttpResponse::Ok()
+}
+
+pub async fn webhook(bot: Bot) -> impl update_listeners::UpdateListener<Infallible> {
+    // Heroku defines auto defines a port value
+    /*let teloxide_token = env::var("TELOXIDE_TOKEN").expect("TELOXIDE_TOKEN env variable missing");
+    let port: u16 = env::var("PORT")
+        .expect("PORT env variable missing")
+        .parse()
+        .expect("PORT value to be integer");
+    // Heroku host example .: "heroku-ping-pong-bot.herokuapp.com"
+    let host = env::var("HOST").expect("have HOST env variable");
+    let path = format!("bot{}", teloxide_token);
+    let url = format!("https://{}/{}", host, path);
+
+    bot.set_webhook(url).send().await.expect("Cannot setup a webhook");
+
+    let (tx, rx) = mpsc::unbounded_channel();
+
+    let server = warp::post()
+        .and(warp::path(path))
+        .and(warp::body::json())
+        .map(move |json: serde_json::Value| {
+            let try_parse = match serde_json::from_str(&json.to_string()) {
+                Ok(update) => Ok(update),
+                Err(error) => {
+                    log::error!(
+                        "Cannot parse an update.\nError: {:?}\nValue: {}\n\
+                       This is a bug in teloxide, please open an issue here: \
+                       https://github.com/teloxide/teloxide/issues.",
+                        error,
+                        json
+                    );
+                    Err(error)
+                }
+            };
+            if let Ok(update) = try_parse {
+                tx.send(Ok(update)).expect("Cannot send an incoming update from the webhook")
+            }
+
+            StatusCode::OK
+        })
+        .recover(handle_rejection);
+
+    let serve = warp::serve(server);
+
+    let address = format!("0.0.0.0:{}", port);
+    tokio::spawn(serve.run(address.parse::<SocketAddr>().unwrap()));
+    rx*/
+
+    let bind_address = Result::unwrap_or(env::var("BIND_ADDRESS"), "0.0.0.0".to_string());
+    let bind_port: u16 = env::var("BIND_PORT")
+        .unwrap_or("8080".to_string())
+        .parse()
+        .expect("BIND_PORT value has to be an integer");
+
+    let teloxide_token = env::var("TELOXIDE_TOKEN")
+        .expect("TELOXIDE_TOKEN env variable missing");
+    let host = env::var("HOST")
+        .expect("HOST env variable missing");
+    let path = "/api/v1/message";
+    let url = format!("https://{}/{}/{}", host, teloxide_token, path);
+
+    bot.set_webhook(url).send().await.expect("Cannot setup a webhook");
+
+    let (tx, rx) = mpsc::unbounded_channel();
+
+    let local = tokio::task::LocalSet::new();
+    let sys = actix_rt::System::run_in_tokio("server", &local);
+    let server_res = HttpServer::new(move || {
+        App::new()
+            .app_data(tx.clone())
+            .route(path, web::post()
+                .to(telegram_request))
+    })
+        .bind(format!("{}:{}", bind_address, bind_port)).unwrap()
+        .run()
+        .await.unwrap();
+    sys.await.unwrap();
+
+    return rx;
+}
