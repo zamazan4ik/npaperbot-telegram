@@ -1,12 +1,10 @@
-use teloxide::prelude::*;
-
-use actix_web::{App, HttpServer, Responder, HttpResponse};
-use actix_web::web;
-use actix_web::middleware;
-
-use tokio::sync::mpsc;
-
 use std::env;
+
+use actix_web::{App, HttpResponse, HttpServer, Responder};
+use actix_web::middleware;
+use actix_web::web;
+use teloxide::prelude::*;
+use tokio::sync::mpsc;
 
 async fn telegram_request(tx: web::Data<mpsc::UnboundedSender<Result<Update, String>>>, input: String) -> impl Responder {
     let try_parse = match serde_json::from_str(&input) {

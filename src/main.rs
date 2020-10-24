@@ -1,13 +1,3 @@
-mod utils;
-mod webhook;
-
-use teloxide::{prelude::*, utils::command::BotCommand};
-use tokio::runtime::Runtime;
-
-use lazy_static::lazy_static;
-use regex::Regex;
-use serde_json;
-
 use std::{
     collections::HashMap,
     env,
@@ -15,6 +5,15 @@ use std::{
     thread,
 };
 use std::ops::AddAssign;
+
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde_json;
+use teloxide::{prelude::*, utils::command::BotCommand};
+use tokio::runtime::Runtime;
+
+mod utils;
+mod webhook;
 
 #[derive(BotCommand)]
 #[command(rename = "lowercase", description = "These commands are supported:")]
@@ -62,7 +61,7 @@ async fn run() {
                         Ok(command) => {
                             command_answer(&message, command).await.log_on_error().await;
                             return;
-                        },
+                        }
                         Err(_) => ()
                     };
 
@@ -99,7 +98,7 @@ async fn run() {
                                                 r#" \(by {}\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                            .as_str(),
+                                                .as_str(),
                                         );
                                     }
 
@@ -109,7 +108,7 @@ async fn run() {
                                                 r#" \({}\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                            .as_str(),
+                                                .as_str(),
                                         );
                                     }
 
@@ -119,7 +118,7 @@ async fn run() {
                                                 r#" \(Related: [GitHub issue]({})\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                            .as_str(),
+                                                .as_str(),
                                         );
                                     }
 
