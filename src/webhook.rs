@@ -38,8 +38,8 @@ pub async fn webhook(bot: Bot) -> mpsc::UnboundedReceiver<Result<Update, String>
         .expect("TELOXIDE_TOKEN env variable missing");
     let host = env::var("HOST")
         .expect("HOST env variable missing");
-    let path = "/api/v1/message";
-    let url = format!("https://{}/{}/{}", host, teloxide_token, path);
+    let path = format!("/{}/api/v1/message", teloxide_token);
+    let url = format!("https://{}/{}", host, path);
 
     bot.set_webhook(url).send().await.expect("Cannot setup a webhook");
 
@@ -53,7 +53,7 @@ pub async fn webhook(bot: Bot) -> mpsc::UnboundedReceiver<Result<Update, String>
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(sender_channel_data.clone())
-            .route(path, web::post()
+            .route(path.as_str(), web::post()
                 .to(telegram_request))
     })
         .bind(format!("{}:{}", bind_address, bind_port)).unwrap()
