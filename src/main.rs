@@ -1,12 +1,3 @@
-mod utils;
-
-use teloxide::{prelude::*, utils::command::BotCommand};
-use tokio::runtime::Runtime;
-
-use lazy_static::lazy_static;
-use regex::Regex;
-use serde_json;
-
 use std::{
     collections::HashMap,
     env,
@@ -14,6 +5,15 @@ use std::{
     thread,
 };
 use std::ops::AddAssign;
+
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde_json;
+use teloxide::{prelude::*, utils::command::BotCommand};
+use tokio::runtime::Runtime;
+
+mod utils;
+mod webhook;
 
 #[derive(BotCommand)]
 #[command(rename = "lowercase", description = "These commands are supported:")]
@@ -37,12 +37,18 @@ async fn run() {
 
     let papers = Arc::new(Mutex::new(HashMap::<String, serde_json::Value>::new()));
 
-    let papers_database_uri = env::var("PAPERS_DATABASE_URI").expect("PAPERS_DATABASE_URI is not defined in environment variables");
+    let papers_database_uri = env::var("PAPERS_DATABASE_URI")
+        .expect("PAPERS_DATABASE_URI is not defined in environment variables");
 
     let update_papers = papers.clone();
     let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
 
-    Dispatcher::new(bot)
+    let is_webhook_mode_enabled = env::var("WEBHOOK_MODE")
+        .unwrap_or("false".to_string())
+        .parse::<bool>()
+        .expect("Cannot convert WEBHOOK_MODE to bool. Applicable values are only \"true\" or \"false\"");
+
+    let bot_dispatcher = Dispatcher::new(bot.clone())
         .messages_handler(|rx: DispatcherHandlerRx<Message>| {
             let rx = rx;
             rx.for_each(move |message| {
@@ -58,7 +64,7 @@ async fn run() {
                         Ok(command) => {
                             command_answer(&message, command).await.log_on_error().await;
                             return;
-                        },
+                        }
                         Err(_) => ()
                     };
 
@@ -95,7 +101,7 @@ async fn run() {
                                                 r#" \(by {}\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                            .as_str(),
+                                                .as_str(),
                                         );
                                     }
 
@@ -105,7 +111,7 @@ async fn run() {
                                                 r#" \({}\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                            .as_str(),
+                                                .as_str(),
                                         );
                                     }
 
@@ -115,7 +121,7 @@ async fn run() {
                                                 r#" \(Related: [GitHub issue]({})\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                            .as_str(),
+                                                .as_str(),
                                         );
                                     }
 
@@ -142,9 +148,17 @@ async fn run() {
                     }
                 }
             })
-        })
-        .dispatch()
-        .await;
+        });
+
+
+    if is_webhook_mode_enabled {
+        let rx = webhook::webhook(bot);
+        bot_dispatcher.dispatch_with_listener(rx.await,
+                                              LoggingErrorHandler::with_custom_text("An error from the update listener")).await;
+    } else {
+        bot.delete_webhook().send().await.expect("Cannot delete a webhook");
+        bot_dispatcher.dispatch().await;
+    }
 
     h.join().unwrap();
 }
