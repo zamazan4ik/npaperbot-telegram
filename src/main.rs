@@ -38,7 +38,7 @@ async fn run() {
     let papers = Arc::new(Mutex::new(HashMap::<String, serde_json::Value>::new()));
 
     let papers_database_uri = env::var("PAPERS_DATABASE_URI")
-        .expect("PAPERS_DATABASE_URI is not defined in environment variables");
+        .unwrap_or("https://wg21.link/index.json".to_string());
 
     let update_papers = papers.clone();
     let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
