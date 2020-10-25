@@ -154,7 +154,7 @@ async fn run() {
     if is_webhook_mode_enabled {
         let rx = webhook::webhook(bot);
         bot_dispatcher.dispatch_with_listener(rx.await,
-            LoggingErrorHandler::with_custom_text("An error from the update listener")).await;
+                                              LoggingErrorHandler::with_custom_text("An error from the update listener")).await;
     } else {
         bot.delete_webhook().send().await.expect("Cannot delete a webhook");
         bot_dispatcher.dispatch().await;
