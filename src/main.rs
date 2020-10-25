@@ -13,6 +13,7 @@ use std::{
 use teloxide::{prelude::*, utils::command::BotCommand};
 
 mod logging;
+mod search;
 mod utils;
 mod webhook;
 
@@ -23,6 +24,8 @@ enum Command {
     Help,
     #[command(description = "show generic information about the bot.")]
     About,
+    #[command(description = "search C++ proposal with a title part or an author name.")]
+    Search,
 }
 
 #[tokio::main]
@@ -189,6 +192,7 @@ async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> Respons
     match command {
         Command::Help => cx.reply_to(HELP_TEXT).send().await?,
         Command::About => cx.reply_to(ABOUT_TEXT).send().await?,
+        Command::Search => cx.reply_to(ABOUT_TEXT).send().await?,
     };
 
     Ok(())
