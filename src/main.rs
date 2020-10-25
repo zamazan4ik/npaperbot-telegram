@@ -1,16 +1,16 @@
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde_json;
+use tokio::runtime::Runtime;
+
+use std::ops::AddAssign;
 use std::{
     collections::HashMap,
     env,
     sync::{Arc, Mutex},
     thread,
 };
-use std::ops::AddAssign;
-
-use lazy_static::lazy_static;
-use regex::Regex;
-use serde_json;
 use teloxide::{prelude::*, utils::command::BotCommand};
-use tokio::runtime::Runtime;
 
 mod utils;
 mod webhook;
@@ -37,8 +37,8 @@ async fn run() {
 
     let papers = Arc::new(Mutex::new(HashMap::<String, serde_json::Value>::new()));
 
-    let papers_database_uri = env::var("PAPERS_DATABASE_URI")
-        .unwrap_or("https://wg21.link/index.json".to_string());
+    let papers_database_uri =
+        env::var("PAPERS_DATABASE_URI").unwrap_or("https://wg21.link/index.json".to_string());
 
     let update_papers = papers.clone();
     let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
@@ -46,10 +46,12 @@ async fn run() {
     let is_webhook_mode_enabled = env::var("WEBHOOK_MODE")
         .unwrap_or("false".to_string())
         .parse::<bool>()
-        .expect("Cannot convert WEBHOOK_MODE to bool. Applicable values are only \"true\" or \"false\"");
+        .expect(
+            "Cannot convert WEBHOOK_MODE to bool. Applicable values are only \"true\" or \"false\"",
+        );
 
-    let bot_dispatcher = Dispatcher::new(bot.clone())
-        .messages_handler(|rx: DispatcherHandlerRx<Message>| {
+    let bot_dispatcher =
+        Dispatcher::new(bot.clone()).messages_handler(|rx: DispatcherHandlerRx<Message>| {
             let rx = rx;
             rx.for_each(move |message| {
                 let papers = papers.clone();
@@ -65,7 +67,7 @@ async fn run() {
                             command_answer(&message, command).await.log_on_error().await;
                             return;
                         }
-                        Err(_) => ()
+                        Err(_) => (),
                     };
 
                     let mut result = Vec::<String>::new();
@@ -101,7 +103,7 @@ async fn run() {
                                                 r#" \(by {}\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                                .as_str(),
+                                            .as_str(),
                                         );
                                     }
 
@@ -111,7 +113,7 @@ async fn run() {
                                                 r#" \({}\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                                .as_str(),
+                                            .as_str(),
                                         );
                                     }
 
@@ -121,7 +123,7 @@ async fn run() {
                                                 r#" \(Related: [GitHub issue]({})\)"#,
                                                 utils::markdown_v2_escape(x.as_str().unwrap())
                                             )
-                                                .as_str(),
+                                            .as_str(),
                                         );
                                     }
 
@@ -150,13 +152,19 @@ async fn run() {
             })
         });
 
-
     if is_webhook_mode_enabled {
         let rx = webhook::webhook(bot);
-        bot_dispatcher.dispatch_with_listener(rx.await,
-                                              LoggingErrorHandler::with_custom_text("An error from the update listener")).await;
+        bot_dispatcher
+            .dispatch_with_listener(
+                rx.await,
+                LoggingErrorHandler::with_custom_text("An error from the update listener"),
+            )
+            .await;
     } else {
-        bot.delete_webhook().send().await.expect("Cannot delete a webhook");
+        bot.delete_webhook()
+            .send()
+            .await
+            .expect("Cannot delete a webhook");
         bot_dispatcher.dispatch().await;
     }
 
@@ -164,8 +172,7 @@ async fn run() {
 }
 
 async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> ResponseResult<()> {
-    static HELP_TEXT: &str =
-        "Команды:
+    static HELP_TEXT: &str = "Команды:
         (инлайн-режим) - Просто напишите \
         {Nxxxx|Pxxxx|PxxxxRx|Dxxxx|DxxxxRx|CWGxxx|EWGxxx|LWGxxx|LEWGxxx|FSxxx} в любом сообщении
         /about - информация о боте
@@ -200,7 +207,9 @@ fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>
     }
 }
 
-async fn update_paper_database(uri: &String) -> reqwest::Result<HashMap<String, serde_json::Value>> {
+async fn update_paper_database(
+    uri: &String,
+) -> reqwest::Result<HashMap<String, serde_json::Value>> {
     let resp = reqwest::get(uri)
         .await?
         .json::<HashMap<String, serde_json::Value>>()
