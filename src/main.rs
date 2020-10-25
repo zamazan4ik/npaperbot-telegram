@@ -43,9 +43,12 @@ async fn run() {
     let update_papers = papers.clone();
     let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
 
-    let rx = webhook::webhook(bot.clone());
+    let is_webhook_mode_enabled = env::var("WEBHOOK_MODE")
+        .unwrap_or("false".to_string())
+        .parse::<bool>()
+        .expect("Cannot convert WEBHOOK_MODE to bool. Applicable values are only \"true\" or \"false\"");
 
-    Dispatcher::new(bot)
+    let bot_dispatcher = Dispatcher::new(bot.clone())
         .messages_handler(|rx: DispatcherHandlerRx<Message>| {
             let rx = rx;
             rx.for_each(move |message| {
@@ -145,10 +148,17 @@ async fn run() {
                     }
                 }
             })
-        })
-        .dispatch_with_listener(rx.await,
-                                LoggingErrorHandler::with_custom_text("An error from the update listener"))
-        .await;
+        });
+
+
+    if is_webhook_mode_enabled {
+        let rx = webhook::webhook(bot);
+        bot_dispatcher.dispatch_with_listener(rx.await,
+            LoggingErrorHandler::with_custom_text("An error from the update listener")).await;
+    } else {
+        bot.delete_webhook().send().await.expect("Cannot delete a webhook");
+        bot_dispatcher.dispatch().await;
+    }
 
     h.join().unwrap();
 }
