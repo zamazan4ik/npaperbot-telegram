@@ -12,6 +12,7 @@ use std::{
 };
 use teloxide::{prelude::*, utils::command::BotCommand};
 
+mod logging;
 mod utils;
 mod webhook;
 
@@ -30,8 +31,9 @@ async fn main() {
 }
 
 async fn run() {
-    teloxide::enable_logging!();
-    log::info!("Starting npaperbot!");
+    logging::init_logger();
+
+    log::info!("Starting npaperbot-telegram");
 
     let bot = Bot::from_env();
 
@@ -153,6 +155,7 @@ async fn run() {
         });
 
     if is_webhook_mode_enabled {
+        log::info!("Webhook mode activated");
         let rx = webhook::webhook(bot);
         bot_dispatcher
             .dispatch_with_listener(
@@ -161,6 +164,7 @@ async fn run() {
             )
             .await;
     } else {
+        log::info!("Long polling mode activated");
         bot.delete_webhook()
             .send()
             .await
@@ -199,10 +203,11 @@ fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>
 
         *papers.lock().unwrap() = new_papers;
 
-        println!(
-            "Update executed successfully! {}",
+        log::info!(
+            "Update executed successfully! Papers database size: {}",
             papers.lock().unwrap().len()
         );
+
         std::thread::sleep(chrono::Duration::hours(1).to_std().unwrap());
     }
 }
