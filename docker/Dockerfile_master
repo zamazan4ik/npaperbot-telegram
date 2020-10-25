@@ -2,7 +2,7 @@ FROM rust:1.45.2 as builder
 WORKDIR /usr/src/npaperbot-telegram
 ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
 ARG CACHE_DATE=2020-01-01
-RUN git clone ${NPAPERBOT_SOURCE_URL}
+RUN git clone --single-branch --branch master ${NPAPERBOT_SOURCE_URL}
 WORKDIR npaperbot-telegram
 RUN cargo install --path .
 
