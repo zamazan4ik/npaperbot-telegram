@@ -45,6 +45,11 @@ async fn run() {
     let papers_database_uri =
         env::var("PAPERS_DATABASE_URI").unwrap_or("https://wg21.link/index.json".to_string());
 
+    let max_results_per_request = env::var("MAX_RESULTS_PER_REQUEST")
+        .unwrap_or("20".to_string())
+        .parse::<u8>()
+        .expect("Cannot convert MAX_RESULTS_PER_REQUEST to u8");
+
     let update_papers = papers.clone();
     let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
 
@@ -56,7 +61,7 @@ async fn run() {
         );
 
     let bot_dispatcher =
-        Dispatcher::new(bot.clone()).messages_handler(|rx: DispatcherHandlerRx<Message>| {
+        Dispatcher::new(bot.clone()).messages_handler(move |rx: DispatcherHandlerRx<Message>| {
             let rx = rx;
             rx.for_each(move |message| {
                 let papers = papers.clone();
@@ -134,7 +139,7 @@ async fn run() {
 
                                     result.push(one_result);
 
-                                    if result.len() > 20 {
+                                    if result.len() > max_results_per_request as usize {
                                         break;
                                     }
                                 }
