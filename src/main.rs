@@ -227,6 +227,10 @@ async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> Respons
         Command::Help => cx.reply_to(HELP_TEXT).send().await?,
         Command::About => cx.reply_to(ABOUT_TEXT).send().await?,
         Command::Search => {
+            // get possibly truncated results
+            // format it in proper way
+            // send back formatted result
+            // if required - send a message about truncation
             cx.reply_to("Not implemented yet. Stay tuned :)")
                 .send()
                 .await?
@@ -243,16 +247,27 @@ fn update_database_thread(
 ) {
     loop {
         let new_papers = Runtime::new()
-            .unwrap()
-            .block_on(update_paper_database(&uri))
-            .unwrap();
+            .expect("Cannot create a runtime for papers database updates")
+            .block_on(update_paper_database(&uri));
 
-        *papers.lock().unwrap() = new_papers;
+        match new_papers {
+            Ok(parsed_papers) => {
+                *papers
+                    .lock()
+                    .expect("An error occurred during papers mutex acquisition") = parsed_papers;
 
-        log::info!(
-            "Update executed successfully! Papers database size: {}",
-            papers.lock().unwrap().len()
-        );
+                log::info!(
+                    "Papers database update executed successfully. Papers database size: {}",
+                    papers.lock().unwrap().len()
+                );
+            }
+            Err(e) => {
+                log::info!(
+                    "An error occurred during papers database update. The error: {}",
+                    e
+                );
+            }
+        }
 
         std::thread::sleep(
             update_periodicity
@@ -275,7 +290,8 @@ async fn update_paper_database(
 
 fn find_search_request_in_message(text: &str) -> regex::CaptureMatches {
     lazy_static! {
-        static ref RE: Regex = Regex::new(r#"(?i)[\{|\[|<](?P<title>(?:N|P|D|CWG|EWG|LWG|LEWG|FS|EDIT|SD)\d{1,5})(?:R(?P<revision>\d{1,2}))?[\}|\]|>]"#).unwrap();
+        static ref RE: Regex = Regex::new(r#"(?i)[\{|\[|<](?P<title>(?:N|P|D|CWG|EWG|LWG|LEWG|FS|EDIT|SD)\d{1,5})(?:R(?P<revision>\d{1,2}))?[\}|\]|>]"#)
+            .expect("Cannot build a regular expression");
     }
 
     RE.captures_iter(text)

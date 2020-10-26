@@ -15,7 +15,7 @@ pub fn markdown_v2_escape(text: &str) -> String {
             )
             .as_str()
         )
-        .unwrap();
+        .expect("Cannot build a regular expression");
     }
 
     RE.replace_all(text, r#"\$symbol"#).to_string()
@@ -27,7 +27,7 @@ pub fn markdown_v2_escape_inline_uri(text: &str) -> String {
         static ref RE: Regex = Regex::new(
             format!(r#"(?P<symbol>([\{}]))"#, &SYMBOLS_FOR_ESCAPING.join(r#"\"#)).as_str()
         )
-        .unwrap();
+        .expect("Cannot build a regular expression");
     }
 
     RE.replace_all(text, r#"\$symbol"#).to_string()
