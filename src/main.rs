@@ -81,6 +81,7 @@ async fn run() {
                     };
 
                     let mut result = Vec::<String>::new();
+                    let mut is_result_truncated = false;
                     {
                         let matches = find_search_request_in_message(&message_text);
 
@@ -140,6 +141,7 @@ async fn run() {
                                     result.push(one_result);
 
                                     if result.len() > max_results_per_request as usize {
+                                        is_result_truncated = true;
                                         break;
                                     }
                                 }
@@ -157,6 +159,18 @@ async fn run() {
                             .await
                             .log_on_error()
                             .await;
+
+                        if is_result_truncated {
+                            message
+                                .reply_to(format!("Показаны только первые {} результатов. \
+                                Если нужного среди них нет - используйте более точный запрос. Спасибо!",
+                                                  max_results_per_request))
+                                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                                .send()
+                                .await
+                                .log_on_error()
+                                .await;
+                        }
                     }
                 }
             })
@@ -188,6 +202,7 @@ async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> Respons
         (инлайн-режим) - Просто напишите \
         {Nxxxx|Pxxxx|PxxxxRx|Dxxxx|DxxxxRx|CWGxxx|EWGxxx|LWGxxx|LEWGxxx|FSxxx} в любом сообщении
         /about - информация о боте
+        /search - поиск бумаги по её номеру, части названия или автору
         /help - показать это сообщение";
     static ABOUT_TEXT: &str =
         "Репозиторий бота: https://github.com/ZaMaZaN4iK/npaperbot-telegram .\
@@ -197,7 +212,11 @@ async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> Respons
     match command {
         Command::Help => cx.reply_to(HELP_TEXT).send().await?,
         Command::About => cx.reply_to(ABOUT_TEXT).send().await?,
-        Command::Search => cx.reply_to(ABOUT_TEXT).send().await?,
+        Command::Search => {
+            cx.reply_to("Not implemented yet. Stay tuned :)")
+                .send()
+                .await?
+        }
     };
 
     Ok(())
