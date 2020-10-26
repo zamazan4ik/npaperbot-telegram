@@ -33,9 +33,9 @@ If for any variable there is no default value and you didn't provide any value -
 Bot automatically registers webhook (if is launched in webhook mode) with address `https://$HOST/$TELOXIDE_TOKEN/api/v1/message`.
 
 ### How to use
-Currently the only way to use the bot is inline mode. Write a C++ proposal number in any paired brackets (e.g. `[p1000]` or `{p1000}`) and the bot will return all corresponding results.
-
-Search functionality isn't supported yet (WIP). Stay tuned :)
+* Inline mode. Write any C++ proposal number (like `p1000`) in any paired brackets (e.g. `[p1000]` or `{p1000}`) and the bot will return all corresponding results.
+* Search command. Type `/search pattern` and bot will try to find corresponding paper. Pattern shall be a paper number or a title part or an author.
+Currently search is case-insensitive (but without fuzzy search support).
 
 ### Feedback
 If you have any suggestions or want to report a bug - feel free to create in issue in this repo. Thank you!

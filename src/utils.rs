@@ -1,3 +1,4 @@
+use crate::storage::Paper;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -31,4 +32,26 @@ pub fn markdown_v2_escape_inline_uri(text: &str) -> String {
     }
 
     RE.replace_all(text, r#"\$symbol"#).to_string()
+}
+
+pub fn convert_papers_to_result(papers: Vec<Paper>) -> String {
+    let mut formatted_papers = Vec::<String>::new();
+    formatted_papers.reserve(papers.len());
+
+    for paper in papers.iter() {
+        formatted_papers.push(paper.format_with_markdownv2())
+    }
+
+    formatted_papers.sort_unstable();
+
+    return formatted_papers.join("\n\n");
+}
+
+pub fn find_search_request_in_message(text: &str) -> regex::CaptureMatches {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r#"(?i)[\{|\[|<](?P<title>(?:N|P|D|CWG|EWG|LWG|LEWG|FS|EDIT|SD)\d{1,5})(?:R(?P<revision>\d{1,2}))?[\}|\]|>]"#)
+            .expect("Cannot build a regular expression");
+    }
+
+    RE.captures_iter(text)
 }
