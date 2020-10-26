@@ -23,7 +23,8 @@ The bot can be configured only with environment variables. For now there are we 
 | TELOXIDE_TOKEN | Telegram bot token | Any valid and registered Telegram bot token | None | All mods |
 | WEBHOOK_MODE | Run bot in webhook mode or long-polling mode | `true` for webhook, 'false' for long-polling | `false` | All mods |
 | PAPERS_DATABASE_URI | HTTP(S) URI with C++ proposals JSON file | Any valid URI | `https://wg21.link/index.json` | All mods |
-| MAX_RESULTS_PER_REQUEST | Number of at most permitted results per request. Other results will be truncated | Unsigned 8-bit integer | 20 | All mods |
+| MAX_RESULTS_PER_REQUEST | Number of at most permitted results per request. Other results will be truncated | Unsigned 8-bit integer | `20` | All mods |
+| DATABASE_UPDATE_PERIODICITY_IN_HOURS | Papers database update periodicity in hours | Any reasonable positive i64 integer | `1` | All mods |
 | BIND_ADDRESS | Address for binding the web-service | Any valid IP address | `0.0.0.0` | Webhook mode |  
 | BIND_PORT | Port for binding the web-service | Any valid port | `8080` | Webhook mode |
 | HOST | Host, where Telegram will send updates in webhook mode | Any valid host address | None | Webhook mode |

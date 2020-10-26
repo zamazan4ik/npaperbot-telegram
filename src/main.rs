@@ -3,6 +3,7 @@ use regex::Regex;
 use serde_json;
 use tokio::runtime::Runtime;
 
+use chrono::Duration;
 use std::ops::AddAssign;
 use std::{
     collections::HashMap,
@@ -50,8 +51,21 @@ async fn run() {
         .parse::<u8>()
         .expect("Cannot convert MAX_RESULTS_PER_REQUEST to u8");
 
+    let database_update_periodicity = Duration::hours(
+        env::var("DATABASE_UPDATE_PERIODICITY_IN_HOURS")
+            .unwrap_or("1".to_string())
+            .parse::<i64>()
+            .expect("Cannot convert DATABASE_UPDATE_PERIODICITY_IN_HOURS to hours"),
+    );
+
     let update_papers = papers.clone();
-    let h = thread::spawn(move || update_database_thread(update_papers, papers_database_uri));
+    let h = thread::spawn(move || {
+        update_database_thread(
+            update_papers,
+            papers_database_uri,
+            database_update_periodicity,
+        )
+    });
 
     let is_webhook_mode_enabled = env::var("WEBHOOK_MODE")
         .unwrap_or("false".to_string())
@@ -222,7 +236,11 @@ async fn command_answer(cx: &UpdateWithCx<Message>, command: Command) -> Respons
     Ok(())
 }
 
-fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>, uri: String) {
+fn update_database_thread(
+    papers: Arc<Mutex<HashMap<String, serde_json::Value>>>,
+    uri: String,
+    update_periodicity: Duration,
+) {
     loop {
         let new_papers = Runtime::new()
             .unwrap()
@@ -236,7 +254,11 @@ fn update_database_thread(papers: Arc<Mutex<HashMap<String, serde_json::Value>>>
             papers.lock().unwrap().len()
         );
 
-        std::thread::sleep(chrono::Duration::hours(1).to_std().unwrap());
+        std::thread::sleep(
+            update_periodicity
+                .to_std()
+                .expect("Cannot convert to std time"),
+        );
     }
 }
 
