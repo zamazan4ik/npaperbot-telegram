@@ -39,3 +39,5 @@ Currently search is case-insensitive (but without fuzzy search support).
 
 ### Feedback
 If you have any suggestions or want to report a bug - feel free to create in issue in this repo. Thank you!
+
+test_ci_again
