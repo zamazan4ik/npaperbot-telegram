@@ -1,13 +1,12 @@
-use crate::{storage, PapersStorage};
-use chrono::Duration;
-use std::collections::HashMap;
-use tokio::runtime::Runtime;
-
-pub fn update_database_thread(papers: PapersStorage, uri: String, update_periodicity: Duration) {
+pub fn update_database_thread(
+    papers: crate::storage::PapersStorage,
+    uri: url::Url,
+    update_periodicity: chrono::Duration,
+) {
     loop {
-        let new_papers = Runtime::new()
+        let new_papers = tokio::runtime::Runtime::new()
             .expect("Cannot create a runtime for papers database updates")
-            .block_on(update_paper_database(&uri));
+            .block_on(update_paper_database(uri.clone()));
 
         match new_papers {
             Ok(parsed_papers) => {
@@ -36,13 +35,13 @@ pub fn update_database_thread(papers: PapersStorage, uri: String, update_periodi
     }
 }
 
-async fn update_paper_database(uri: &String) -> reqwest::Result<storage::PaperDatabase> {
+async fn update_paper_database(uri: url::Url) -> reqwest::Result<crate::storage::PaperDatabase> {
     let resp = reqwest::get(uri)
         .await?
-        .json::<HashMap<String, storage::Paper>>()
+        .json::<std::collections::HashMap<String, crate::storage::Paper>>()
         .await?;
 
-    let new_papers = storage::PaperDatabase::new(resp);
+    let new_papers = crate::storage::PaperDatabase::new(resp);
 
     Ok(new_papers)
 }

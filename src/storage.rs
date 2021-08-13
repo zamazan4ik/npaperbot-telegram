@@ -149,3 +149,5 @@ impl PaperDatabase {
         return (is_limit_reached, result);
     }
 }
+
+pub type PapersStorage = std::sync::Arc<std::sync::Mutex<crate::storage::PaperDatabase>>;
