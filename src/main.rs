@@ -8,6 +8,7 @@ use teloxide::{prelude::*, utils::command::BotCommand};
 
 mod commands;
 mod fetch_database;
+mod implicit_search_request_parser;
 mod logging;
 mod parameters;
 mod storage;
@@ -74,46 +75,49 @@ async fn run() {
                     let mut result_papers = Vec::<Paper>::new();
                     let mut is_result_truncated = false;
                     {
-                        let matches = utils::find_search_request_in_message(&message_text);
+                        let paper_requests = utils::find_search_request_in_message(&message_text);
 
-                        for mat in matches {
-                            let paper_database = papers.lock().unwrap();
+                        match paper_requests {
+                            Ok(paper_requests) => {
+                                for paper_request in paper_requests {
+                                    let paper_type = paper_request.paper_type;
+                                    let paper_number = paper_request.paper_number;
+                                    let revision_number = paper_request.revision_number;
 
-                            let title_pattern = mat.name("title");
-                            let revision_pattern = mat.name("revision");
+                                    let mut pattern = format!("{}{}", paper_type, paper_number);
 
-                            if title_pattern.is_none() {
-                                log::warn!("Title pattern is empty");
-                                break;
-                            }
+                                    if let Some(revision_number) = revision_number {
+                                        pattern.push_str(format!("r{}", revision_number).as_str());
+                                    }
 
-                            let mut pattern = title_pattern.unwrap().as_str().to_lowercase();
+                                    let paper_database = papers.lock().unwrap();
+                                    let (is_result_truncated_t, found_papers) = paper_database
+                                        .search_by_number(
+                                            &pattern,
+                                            parameters.max_results_per_request,
+                                        );
 
-                            if let Some(revision_pattern) = revision_pattern {
-                                pattern.push_str(
-                                    format!("r{}", revision_pattern.as_str().to_lowercase())
-                                        .as_str(),
-                                );
-                            }
+                                    is_result_truncated =
+                                        is_result_truncated_t || is_result_truncated;
 
-                            let (is_result_truncated_t, found_papers) = paper_database
-                                .search_by_number(&pattern, parameters.max_results_per_request);
+                                    for paper in found_papers {
+                                        result_papers.push(paper);
 
-                            is_result_truncated = is_result_truncated_t || is_result_truncated;
+                                        if result_papers.len()
+                                            == parameters.max_results_per_request as usize
+                                        {
+                                            is_result_truncated = true;
+                                            break;
+                                        }
+                                    }
 
-                            for paper in found_papers {
-                                result_papers.push(paper);
-
-                                if result_papers.len()
-                                    == parameters.max_results_per_request as usize
-                                {
-                                    is_result_truncated = true;
-                                    break;
+                                    if is_result_truncated {
+                                        break;
+                                    }
                                 }
                             }
-
-                            if is_result_truncated {
-                                break;
+                            Err(err) => {
+                                log::warn!("Implicit search request parse error: {:?}", err)
                             }
                         }
                     }
@@ -145,6 +149,16 @@ async fn run() {
                                 .log_on_error()
                                 .await;
                         }
+                    } else {
+                        message
+                            .reply_to(crate::utils::markdown_v2_escape(
+                                "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!"
+                            ))
+                            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                            .send()
+                            .await
+                            .log_on_error()
+                            .await;
                     }
                 }
             })

@@ -1,5 +1,9 @@
 # npaperbot-telegram
-Search C++ proposals in Telegram.
+[![CI](https://github.com/ZaMaZaN4iK/npaperbot-telegram/workflows/Continuous%20integration/badge.svg)](https://github.com/ZaMaZaN4iK/npaperbot-telegram/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+### What
+Search C++ proposals directly in Telegram.
 
 ### Dependencies
 * [Rust](https://www.rust-lang.org/) 1.54 or newer

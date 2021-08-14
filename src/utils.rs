@@ -1,3 +1,4 @@
+use crate::implicit_search_request_parser::ImplicitPaperSearchRequest;
 use crate::storage::Paper;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -47,11 +48,13 @@ pub fn convert_papers_to_result(papers: Vec<Paper>) -> String {
     return formatted_papers.join("\n\n");
 }
 
-pub fn find_search_request_in_message(text: &str) -> regex::CaptureMatches {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r#"(?i)[\{|\[|<](?P<title>(?:N|P|D|CWG|EWG|LWG|LEWG|FS|EDIT|SD)\d{1,5})(?:R(?P<revision>\d{1,2}))?[\}|\]|>]"#)
-            .expect("Cannot build a regular expression");
-    }
+pub fn find_search_request_in_message(
+    text: &str,
+) -> anyhow::Result<Vec<ImplicitPaperSearchRequest>> {
+    let result = crate::implicit_search_request_parser::many_paper_requests(text);
 
-    RE.captures_iter(text)
+    match result {
+        Ok((_, papers)) => Ok(papers),
+        Err(err) => Err(anyhow::anyhow!("Cannot parse search request: {}", err)),
+    }
 }
