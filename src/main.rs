@@ -72,6 +72,7 @@ async fn run() {
                         Err(_) => (),
                     };
 
+                    let mut at_least_one_valid_request = false;
                     let mut result_papers = Vec::<Paper>::new();
                     let mut is_result_truncated = false;
                     {
@@ -80,6 +81,7 @@ async fn run() {
                         match paper_requests {
                             Ok(paper_requests) => {
                                 for paper_request in paper_requests {
+                                    at_least_one_valid_request = true;
                                     let paper_type = paper_request.paper_type;
                                     let paper_number = paper_request.paper_number;
                                     let revision_number = paper_request.revision_number;
@@ -122,26 +124,38 @@ async fn run() {
                         }
                     }
 
-                    if !result_papers.is_empty() {
-                        message
-                            .reply_to(utils::convert_papers_to_result(result_papers))
-                            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                            .send()
-                            .await
-                            .log_on_error()
-                            .await;
+                    if at_least_one_valid_request {
+                        if !result_papers.is_empty() {
+                            message
+                                .reply_to(utils::convert_papers_to_result(result_papers))
+                                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                                .send()
+                                .await
+                                .log_on_error()
+                                .await;
 
-                        if is_result_truncated {
-                            log::info!("Result is truncated");
+                            if is_result_truncated {
+                                log::info!("Result is truncated");
 
+                                message
+                                    .reply_to(crate::utils::markdown_v2_escape(
+                                        format!(
+                                            "Показаны только первые {} результатов. \
+                          Если нужного среди них нет - используйте более точный запрос. Спасибо!",
+                                            parameters.max_results_per_request
+                                        )
+                                            .as_str(),
+                                    ))
+                                    .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                                    .send()
+                                    .await
+                                    .log_on_error()
+                                    .await;
+                            }
+                        } else {
                             message
                                 .reply_to(crate::utils::markdown_v2_escape(
-                                    format!(
-                                        "Показаны только первые {} результатов. \
-                          Если нужного среди них нет - используйте более точный запрос. Спасибо!",
-                                        parameters.max_results_per_request
-                                    )
-                                    .as_str(),
+                                    "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!"
                                 ))
                                 .parse_mode(teloxide::types::ParseMode::MarkdownV2)
                                 .send()
@@ -149,16 +163,6 @@ async fn run() {
                                 .log_on_error()
                                 .await;
                         }
-                    } else {
-                        message
-                            .reply_to(crate::utils::markdown_v2_escape(
-                                "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!"
-                            ))
-                            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                            .send()
-                            .await
-                            .log_on_error()
-                            .await;
                     }
                 }
             })

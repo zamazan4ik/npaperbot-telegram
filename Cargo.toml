@@ -1,6 +1,6 @@
 [package]
 name = "npaperbot-telegram"
-version = "4.1.0"
+version = "4.1.1"
 authors = ["Alexander Zaitsev <zamazan4ik@tut.by>"]
 edition = "2018"
 resolver = "2"
