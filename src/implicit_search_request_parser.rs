@@ -71,7 +71,14 @@ fn paper(input: &str) -> IResult<&str, ImplicitPaperSearchRequest, VerboseError<
             ImplicitPaperSearchRequest {
                 paper_type: paper_type.to_string(),
                 paper_number: paper_number.to_string(),
-                revision_number: Some(revision_number.parse().expect("Cannot parse as i32")),
+                revision_number: Some(revision_number.parse().map_err(|_| {
+                    nom::Err::Error(VerboseError::<&str> {
+                        errors: vec![(
+                            "",
+                            nom::error::VerboseErrorKind::Nom(nom::error::ErrorKind::TakeWhile1),
+                        )],
+                    })
+                })?),
             },
         ))
     } else {
