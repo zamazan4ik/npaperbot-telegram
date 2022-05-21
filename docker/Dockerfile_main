@@ -1,4 +1,4 @@
-FROM rust:1.55.0 as builder
+FROM docker.io/rust:1.61.0 as builder
 WORKDIR /usr/src/npaperbot-telegram
 ARG NPAPERBOT_SOURCE_URL=https://github.com/ZaMaZaN4iK/npaperbot-telegram.git
 ARG CACHE_DATE=2020-01-01
@@ -6,7 +6,7 @@ RUN git clone --single-branch --branch main ${NPAPERBOT_SOURCE_URL}
 WORKDIR npaperbot-telegram
 RUN cargo install --path .
 
-FROM debian:buster-slim
+FROM docker.io/debian:bullseye-slim
 RUN apt-get update && apt-get install -y openssl ca-certificates && apt-get clean
 COPY --from=builder /usr/local/cargo/bin/npaperbot-telegram /usr/local/bin/npaperbot-telegram
 CMD ["npaperbot-telegram"]
