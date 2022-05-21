@@ -1,9 +1,5 @@
 use crate::fetch_database::update_database_thread;
 use crate::storage::Paper;
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
 use teloxide::{prelude::*, utils::command::BotCommand};
 
 mod commands;
@@ -30,17 +26,21 @@ async fn run() {
 
     let bot = Bot::from_env();
 
-    let papers = Arc::new(Mutex::new(storage::PaperDatabase::new_empty()));
+    let papers = std::sync::Arc::new(std::sync::Mutex::new(storage::PaperDatabase::new_empty()));
 
     let update_papers = papers.clone();
     let papers_database_uri = parameters.papers_database_uri.clone();
     let database_update_periodicity = parameters.database_update_periodicity.clone();
-    let h = thread::spawn(move || {
+
+    let _ = tokio::spawn(async move {
         update_database_thread(
             update_papers,
             papers_database_uri,
-            database_update_periodicity,
+            database_update_periodicity
+                .to_std()
+                .expect("Cannot convert Duration to std"),
         )
+        .await;
     });
 
     let mut bot_dispatcher = Dispatcher::new(bot.clone()).messages_handler(
@@ -186,6 +186,4 @@ async fn run() {
             .expect("Cannot delete a webhook");
         bot_dispatcher.dispatch().await;
     }
-
-    h.join().unwrap();
 }

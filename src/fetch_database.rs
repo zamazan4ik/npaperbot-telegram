@@ -1,12 +1,14 @@
-pub fn update_database_thread(
+pub async fn update_database_thread(
     papers: crate::storage::PapersStorage,
     uri: url::Url,
-    update_periodicity: chrono::Duration,
+    update_periodicity: std::time::Duration,
 ) {
+    let mut interval = tokio::time::interval(update_periodicity);
+
     loop {
-        let new_papers = tokio::runtime::Runtime::new()
-            .expect("Cannot create a runtime for papers database updates")
-            .block_on(update_paper_database(uri.clone()));
+        interval.tick().await;
+
+        let new_papers = update_paper_database(uri.clone()).await;
 
         match new_papers {
             Ok(parsed_papers) => {
@@ -20,18 +22,9 @@ pub fn update_database_thread(
                 );
             }
             Err(e) => {
-                log::info!(
-                    "An error occurred during papers database update. The error: {}",
-                    e
-                );
+                log::info!("An error occurred during papers database update: {}", e);
             }
         }
-
-        std::thread::sleep(
-            update_periodicity
-                .to_std()
-                .expect("Cannot convert to std time"),
-        );
     }
 }
 
