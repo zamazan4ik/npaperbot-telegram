@@ -1,19 +1,6 @@
-use chrono::Local;
-use log::LevelFilter;
-use pretty_env_logger::env_logger::Builder;
-use std::io::Write;
-
 pub fn init_logger() {
-    Builder::new()
-        .format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}] - {}",
-                Local::now().format("%Y-%m-%dT%H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        })
-        .filter(None, LevelFilter::Info)
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .json()
         .init();
 }

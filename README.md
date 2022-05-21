@@ -6,10 +6,10 @@
 Search C++ proposals directly in Telegram.
 
 ### Dependencies
-* [Rust](https://www.rust-lang.org/) 1.55 or newer
+* [Rust](https://www.rust-lang.org/) 1.61 or newer
 * Cargo
 
-Older Rust compiler versions possibly able to build the project but I didn't test it.
+Older Rust compiler versions possibly able to build the project, but I didn't test it.
 
 ### How to build
 * Clone this repository
