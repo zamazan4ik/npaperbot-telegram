@@ -1,6 +1,6 @@
-use teloxide::{prelude::*, utils::command::BotCommand};
+use teloxide::{prelude::*, utils::command::BotCommands};
 
-#[derive(BotCommand)]
+#[derive(Clone, BotCommands)]
 #[command(rename = "lowercase", description = "These commands are supported:")]
 pub(crate) enum Command {
     #[command(description = "display this text.")]
@@ -12,8 +12,9 @@ pub(crate) enum Command {
 }
 
 #[allow(unused_assignments)]
-pub(crate) async fn command_answer(
-    cx: &UpdateWithCx<Bot, Message>,
+pub(crate) async fn command_handler(
+    msg: Message,
+    bot: AutoSend<Bot>,
     command: Command,
     papers: crate::storage::PapersStorage,
     limit: u8,
@@ -31,10 +32,14 @@ pub(crate) async fn command_answer(
 
     match command {
         Command::Help => {
-            cx.reply_to(HELP_TEXT).send().await?;
+            bot.send_message(msg.chat.id, HELP_TEXT)
+                .reply_to_message_id(msg.id)
+                .await?;
         }
         Command::About => {
-            cx.reply_to(ABOUT_TEXT).send().await?;
+            bot.send_message(msg.chat.id, ABOUT_TEXT)
+                .reply_to_message_id(msg.id)
+                .await?;
         }
         Command::Search(pattern) => {
             let mut is_limit_reached = false;
@@ -49,37 +54,40 @@ pub(crate) async fn command_answer(
             }
 
             if !found_papers.is_empty() {
-                cx.reply_to(crate::utils::convert_papers_to_result(found_papers))
-                    .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                    .send()
-                    .await
-                    .log_on_error()
-                    .await;
+                bot.send_message(
+                    msg.chat.id,
+                    crate::utils::convert_papers_to_result(found_papers),
+                )
+                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                .reply_to_message_id(msg.id)
+                .await?;
 
                 if is_limit_reached {
-                    cx.reply_to(crate::utils::markdown_v2_escape(
-                        format!(
-                            "Показаны только первые {} результатов. \
+                    bot.send_message(
+                        msg.chat.id,
+                        crate::utils::markdown_v2_escape(
+                            format!(
+                                "Показаны только первые {} результатов. \
                           Если нужного среди них нет - используйте более точный запрос. Спасибо!",
-                            limit
-                        )
-                        .as_str(),
-                    ))
+                                limit
+                            )
+                            .as_str(),
+                        ),
+                    )
                     .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                    .send()
-                    .await
-                    .log_on_error()
-                    .await;
+                    .reply_to_message_id(msg.id)
+                    .await?;
                 }
             } else {
-                cx.reply_to(crate::utils::markdown_v2_escape(
-                    "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!",
-                ))
-                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                .send()
-                .await
-                .log_on_error()
-                .await;
+                bot.send_message(
+                    msg.chat.id,
+                    crate::utils::markdown_v2_escape(
+                        "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!",
+                    )
+                    )
+                    .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                    .reply_to_message_id(msg.id)
+                    .await?;
             }
         }
     };

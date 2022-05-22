@@ -1,6 +1,7 @@
 use crate::fetch_database::update_database_thread;
 use crate::storage::Paper;
-use teloxide::{prelude::*, utils::command::BotCommand};
+use anyhow::anyhow;
+use teloxide::prelude::*;
 
 mod commands;
 mod fetch_database;
@@ -22,9 +23,8 @@ async fn run() {
     log::info!("Starting npaperbot-telegram");
 
     let parameters = std::sync::Arc::new(parameters::Parameters::new());
-    let bot_parameters = parameters.clone();
 
-    let bot = Bot::from_env();
+    let bot = Bot::from_env().auto_send();
 
     let papers = std::sync::Arc::new(std::sync::Mutex::new(storage::PaperDatabase::new_empty()));
 
@@ -43,136 +43,42 @@ async fn run() {
         .await;
     });
 
-    let mut bot_dispatcher = Dispatcher::new(bot.clone()).messages_handler(
-        move |rx: DispatcherHandlerRx<Bot, Message>| {
-            let rx = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
-            rx.for_each(move |message| {
-                let parameters = bot_parameters.clone();
-                let papers = papers.clone();
-                async move {
-                    let message_text = match message.update.text() {
-                        Some(x) => x,
-                        None => return,
-                    };
+    let handler = Update::filter_message()
+        .branch(
+            dptree::entry()
+                .filter_command::<commands::Command>()
+                .endpoint(commands::command_handler),
+        )
+        .branch(
+            dptree::filter(|msg: Message| msg.text().is_some()).endpoint(
+                |msg: Message,
+                 bot: AutoSend<Bot>,
+                 papers: crate::storage::PapersStorage,
+                 max_results_per_request: u8| async move {
+                    process_message(msg, bot, papers, max_results_per_request).await?;
+                    anyhow::Result::Ok(())
+                },
+            ),
+        );
 
-                    // Handle commands
-                    match commands::Command::parse(&message_text, &parameters.bot_name) {
-                        Ok(command) => {
-                            commands::command_answer(
-                                &message,
-                                command,
-                                papers.clone(),
-                                parameters.max_results_per_request,
-                            )
-                            .await
-                            .log_on_error()
-                            .await;
-                            return;
-                        }
-                        Err(_) => (),
-                    };
+    if !parameters.is_webhook_mode_enabled {
+        log::info!("Webhook deleted");
+        bot.delete_webhook().await.expect("Cannot delete a webhook");
+    }
 
-                    let mut at_least_one_valid_request = false;
-                    let mut result_papers = Vec::<Paper>::new();
-                    let mut is_result_truncated = false;
-                    {
-                        let paper_requests = utils::find_search_request_in_message(&message_text);
-
-                        match paper_requests {
-                            Ok(paper_requests) => {
-                                for paper_request in paper_requests {
-                                    at_least_one_valid_request = true;
-                                    let paper_type = paper_request.paper_type;
-                                    let paper_number = paper_request.paper_number;
-                                    let revision_number = paper_request.revision_number;
-
-                                    let mut pattern = format!("{}{}", paper_type, paper_number);
-
-                                    if let Some(revision_number) = revision_number {
-                                        pattern.push_str(format!("r{}", revision_number).as_str());
-                                    }
-
-                                    let paper_database = papers.lock().unwrap();
-                                    let (is_result_truncated_t, found_papers) = paper_database
-                                        .search_by_number(
-                                            &pattern,
-                                            parameters.max_results_per_request,
-                                        );
-
-                                    is_result_truncated =
-                                        is_result_truncated_t || is_result_truncated;
-
-                                    for paper in found_papers {
-                                        result_papers.push(paper);
-
-                                        if result_papers.len()
-                                            == parameters.max_results_per_request as usize
-                                        {
-                                            is_result_truncated = true;
-                                            break;
-                                        }
-                                    }
-
-                                    if is_result_truncated {
-                                        break;
-                                    }
-                                }
-                            }
-                            Err(err) => {
-                                log::warn!("Implicit search request parse error: {:?}", err)
-                            }
-                        }
-                    }
-
-                    if at_least_one_valid_request {
-                        if !result_papers.is_empty() {
-                            message
-                                .reply_to(utils::convert_papers_to_result(result_papers))
-                                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                                .send()
-                                .await
-                                .log_on_error()
-                                .await;
-
-                            if is_result_truncated {
-                                log::info!("Result is truncated");
-
-                                message
-                                    .reply_to(crate::utils::markdown_v2_escape(
-                                        format!(
-                                            "Показаны только первые {} результатов. \
-                          Если нужного среди них нет - используйте более точный запрос. Спасибо!",
-                                            parameters.max_results_per_request
-                                        )
-                                            .as_str(),
-                                    ))
-                                    .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                                    .send()
-                                    .await
-                                    .log_on_error()
-                                    .await;
-                            }
-                        } else {
-                            message
-                                .reply_to(crate::utils::markdown_v2_escape(
-                                    "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!"
-                                ))
-                                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
-                                .send()
-                                .await
-                                .log_on_error()
-                                .await;
-                        }
-                    }
-                }
-            })
-        },
-    );
+    let mut bot_dispatcher = Dispatcher::builder(bot.clone(), handler)
+        .dependencies(dptree::deps![papers, parameters.max_results_per_request])
+        .default_handler(|_| async move {})
+        .error_handler(LoggingErrorHandler::with_custom_text(
+            "An error has occurred in the dispatcher",
+        ))
+        .build();
 
     if parameters.is_webhook_mode_enabled {
         log::info!("Webhook mode activated");
         let rx = webhook::webhook(bot);
         bot_dispatcher
+            .setup_ctrlc_handler()
             .dispatch_with_listener(
                 rx.await,
                 LoggingErrorHandler::with_custom_text("An error from the update listener"),
@@ -180,10 +86,102 @@ async fn run() {
             .await;
     } else {
         log::info!("Long polling mode activated");
-        bot.delete_webhook()
-            .send()
-            .await
-            .expect("Cannot delete a webhook");
-        bot_dispatcher.dispatch().await;
+        bot_dispatcher.setup_ctrlc_handler().dispatch().await;
     }
+}
+
+async fn process_message(
+    msg: Message,
+    bot: AutoSend<Bot>,
+    papers: crate::storage::PapersStorage,
+    max_results_per_request: u8,
+) -> anyhow::Result<()> {
+    let mut at_least_one_valid_request = false;
+    let mut result_papers = Vec::<Paper>::new();
+    let mut is_result_truncated = false;
+    {
+        let paper_requests = utils::find_search_request_in_message(
+            msg.text()
+                .ok_or_else(|| anyhow!("Cannot find text in the message"))?,
+        );
+
+        match paper_requests {
+            Ok(paper_requests) => {
+                for paper_request in paper_requests {
+                    at_least_one_valid_request = true;
+                    let paper_type = paper_request.paper_type;
+                    let paper_number = paper_request.paper_number;
+                    let revision_number = paper_request.revision_number;
+
+                    let mut pattern = format!("{}{}", paper_type, paper_number);
+
+                    if let Some(revision_number) = revision_number {
+                        pattern.push_str(format!("r{}", revision_number).as_str());
+                    }
+
+                    let paper_database = papers.lock().unwrap();
+                    let (is_result_truncated_t, found_papers) =
+                        paper_database.search_by_number(&pattern, max_results_per_request);
+
+                    is_result_truncated = is_result_truncated_t || is_result_truncated;
+
+                    for paper in found_papers {
+                        result_papers.push(paper);
+
+                        if result_papers.len() == max_results_per_request as usize {
+                            is_result_truncated = true;
+                            break;
+                        }
+                    }
+
+                    if is_result_truncated {
+                        break;
+                    }
+                }
+            }
+            Err(err) => {
+                log::warn!("Implicit search request parse error: {:?}", err)
+            }
+        }
+    }
+
+    if at_least_one_valid_request {
+        if !result_papers.is_empty() {
+            bot.send_message(msg.chat.id, utils::convert_papers_to_result(result_papers))
+                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                .reply_to_message_id(msg.id)
+                .await?;
+
+            if is_result_truncated {
+                log::info!("Result is truncated");
+
+                bot.send_message(
+                    msg.chat.id,
+                    crate::utils::markdown_v2_escape(
+                        format!(
+                            "Показаны только первые {} результатов. \
+                          Если нужного среди них нет - используйте более точный запрос. Спасибо!",
+                            max_results_per_request
+                        )
+                        .as_str(),
+                    ),
+                )
+                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                .reply_to_message_id(msg.id)
+                .await?;
+            }
+        } else {
+            bot.send_message(
+                msg.chat.id,
+                crate::utils::markdown_v2_escape(
+                    "К сожалению, по Вашему запросу ничего не найдено. Попробуйте другой запрос!",
+                ),
+            )
+            .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+            .reply_to_message_id(msg.id)
+            .await?;
+        }
+    }
+
+    Ok(())
 }
