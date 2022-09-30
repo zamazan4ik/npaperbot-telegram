@@ -45,7 +45,6 @@ pub async fn webhook(
     let url = format!("https://{}{}", host, path);
 
     bot.set_webhook(url.parse().unwrap())
-        .send()
         .await
         .expect("Cannot setup a webhook");
 

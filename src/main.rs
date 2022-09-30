@@ -72,13 +72,13 @@ async fn run() {
         .error_handler(LoggingErrorHandler::with_custom_text(
             "An error has occurred in the dispatcher",
         ))
+        .enable_ctrlc_handler()
         .build();
 
     if parameters.is_webhook_mode_enabled {
         log::info!("Webhook mode activated");
         let rx = webhook::webhook(bot);
         bot_dispatcher
-            .setup_ctrlc_handler()
             .dispatch_with_listener(
                 rx.await,
                 LoggingErrorHandler::with_custom_text("An error from the update listener"),
@@ -86,7 +86,7 @@ async fn run() {
             .await;
     } else {
         log::info!("Long polling mode activated");
-        bot_dispatcher.setup_ctrlc_handler().dispatch().await;
+        bot_dispatcher.dispatch().await;
     }
 }
 
